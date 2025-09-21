@@ -1,22 +1,22 @@
-# STM32F103 – I2C Master giao tiếp EEPROM và UART hiển thị dữ liệu
+# STM32F103 – I2C Master giao tiếp DS1307 và UART hiển thị dữ liệu
 
 ## 📌 Mô tả
-Chương trình sử dụng **STM32F103C8T6** làm **Master I2C** để giao tiếp với EEPROM (ví dụ 24C02).  
-- Ghi một byte dữ liệu vào EEPROM qua I2C.  
-- Đọc lại dữ liệu từ EEPROM.  
-- Gửi dữ liệu đọc được lên terminal qua UART để quan sát.  
+Chương trình sử dụng **STM32F103C8T6** làm **Master I2C** để giao tiếp với **DS1307 RTC** (Real-Time Clock).  
+- STM32 ghi giá trị thời gian ban đầu (12:34:50) vào DS1307 qua I2C.  
+- Sau đó, đọc lại dữ liệu thời gian (giờ : phút : giây) từ DS1307.  
+- Thời gian đọc được sẽ được gửi qua UART và hiển thị trên terminal máy tính.  
 
 ---
 
 ## 🛠️ Yêu cầu phần cứng
 - **Board**: STM32F103C8T6 (Blue Pill).  
-- **EEPROM**: 24C02 hoặc IC tương tự dùng I2C.  
+- **IC RTC**: DS1307 (giao tiếp I2C).  
 - **USB-TTL** để kết nối UART với máy tính.  
 - **Kết nối chân**:  
-  - I2C (STM32 Master ↔ EEPROM):  
-    - PB6 (SCL) → SCL EEPROM  
-    - PB7 (SDA) → SDA EEPROM  
-    - 10kΩ pull-up cho SDA, SCL lên VCC 3.3V  
+  - I2C (STM32 ↔ DS1307):  
+    - PB6 (SCL) → SCL DS1307  
+    - PB7 (SDA) → SDA DS1307  
+    - 10kΩ pull-up cho SDA, SCL lên VCC 5V hoặc 3.3V  
   - UART (STM32 ↔ PC qua USB-TTL):  
     - PA9 (TX)  → RX USB-TTL  
     - PA10 (RX) → TX USB-TTL  
@@ -29,20 +29,24 @@ Chương trình sử dụng **STM32F103C8T6** làm **Master I2C** để giao ti�
 ### 1. I2C1 (Master)
 - Pin: PB6 (SCL), PB7 (SDA).  
 - Mode: I2C Master.  
-- Speed: 100kHz (chuẩn).  
-- Duty cycle: Standard mode.  
-- Pull-up: Bắt buộc (ngoài).  
+- Clock: 100kHz (chuẩn).  
+- Địa chỉ DS1307: `0x68` (7-bit) → `0xD0` (ghi), `0xD1` (đọc).  
+- Kiểu truyền: Start → Address → Data → Stop.  
 
-### 2. EEPROM (ví dụ 24C02)
-- Địa chỉ mặc định: `0xA0` (ghi), `0xA1` (đọc).  
-- Bộ nhớ: 2Kb, tổ chức 256 × 8-bit.  
+### 2. DS1307 RTC
+- Thanh ghi địa chỉ:  
+  - 0x00: giây  
+  - 0x01: phút  
+  - 0x02: giờ  
+- Dữ liệu lưu dưới dạng **BCD (Binary-Coded Decimal)**.  
+- Cần chuyển đổi BCD ↔ Decimal khi xử lý.  
 
 ### 3. UART1
 - Baudrate: 9600.  
 - Word length: 8 bit.  
 - Stop bit: 1.  
 - Parity: None.  
-- Mode: TX (chỉ cần gửi dữ liệu lên terminal).  
+- Mode: TX + RX (chỉ cần TX để gửi dữ liệu về PC).  
 
 ---
 
@@ -54,6 +58,4 @@ Mở phần mềm terminal (PuTTY, TeraTerm, RealTerm, …) với cấu hình:
 - Parity: None  
 
 **Kết quả mong đợi**:  
-- Sau reset, STM32 ghi một giá trị vào EEPROM.  
-- Đọc lại giá trị đó.  
-- Hiển thị trên terminal, ví dụ:  
+- Sau reset, terminal in ra:  
